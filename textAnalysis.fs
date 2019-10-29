@@ -82,14 +82,39 @@ let diff (h1 : int list) (h2 : int list) : double =
 
 
 // ===  Del 3 ===
+
+// The following functions are designed to work with this representation
+// of a word histogram.
 type wordHistogram = (string * int) list
 
+// Using list initilization, the function creates a list of all letters
+// preceeded or proceeded by an empty space, using the Split function.
+// Multiples are ignored, do to using the distinct function.
+// Word occourneces are counted similarly, by counting the resulting number
+// of elements in list created from splitting the string according to each
+// word (minus one, as initial split creates two elements).
+/// <summary> Generate a histogram of all words in a given string. </summary>
+/// <remark> We define words as any collection of letters preceeded or
+/// proceeded by a space. </remark>
+/// <param name = "src"> Any string consisting of letters and ' ' in any 
+/// order </param>
+/// <returns> A list of word counts, consisting of (string * int) tubles
+/// where the first element is the word and the second is the number of
+/// occourences of that word. </returns>
 let wordHistogram (src : string) : wordHistogram =
   let wordList = List.distinct (List.ofArray (src.Split ' '))
   List.init wordList.Length (fun c -> 
        (wordList.[c], (src.Split wordList.[c]).Length - 1))
 
-
+// Sums together the occourences of words in wHist, until the sum exceeds
+// the occo value (histogram occourence sum that specifies the randomly chosen
+// word from wHist) and then returns the wHist according index.
+/// <summary> Identifies the index of the word in a histogram, according to
+/// the summed occourence. </summary>
+/// <param name = "wHist"> Any word histogram </param>
+/// <param name = "occo"> Histogram sum of word </param>
+/// <param name = "sum"> Recursively increasing sum of histogram </param>
+/// <returns> Index of specific word in wHist </returns>
 let rec wordLookUp (wHist : wordHistogram) (occo : int) (sum : int) 
                    (index : int) : int =
   let newSum = sum + (snd wHist.[0])
@@ -98,21 +123,45 @@ let rec wordLookUp (wHist : wordHistogram) (occo : int) (sum : int)
   else
     0 + (wordLookUp wHist.Tail occo newSum (index + 1))
 
+// Sums all the counted occourences of words in the histogram and uses 
+// rnd (random) function to get a random value equal or less to the sum,
+// thus making the word to be chosen based on weighted-randomness, acorrding
+// to words' number of occourences.
+/// <summary> Generates a random word, using a historgram. </summary>
+/// <param name = "wHist"> Any word histogram </param>
+/// <returns> A random word count from wHist. </returns>
 let randomWordSelect (wHist : wordHistogram) : (string * int) =
   let occoSum = List.sum (List.init wHist.Length (fun c -> snd wHist.[c]))
-  let occoN = rnd.Next occoSum
+  let occoN = rnd.Next (occoSum + 1)
   let index = wordLookUp wHist occoN 0 0
   wHist.[index]
 
-let randomWords (wHist : wordHistogram) (nWords : int) : string =
-  let wordList = List.init nWords (fun _ -> randomWordSelect wHist)
+// Calls randomWordSelect method to generate a random word from wHist and
+// then recursively builds the string of random words.
+/// <summary> Generate a string of random words, using a histogram. </summary>
+/// <remark> Histogram is used to determine likelihood for indevidual random 
+/// word's occourence in the string. </remark>
+/// <param name = "wHist"> Any word histogram </param>
+/// <param name = "nWords"> Number of words that string should contain </param>
+/// <returns> A string, consisting of random words. </returns>
+let rec randomWords (wHist : wordHistogram) (nWords : int) : string =
+  let word = fst (randomWordSelect wHist)
 
-  let mutable wordString = ""
-  for i = 0 to wordList.Length-1 do
-    wordString <- wordString + (fst wordList.[i]) + " "
-  wordString
+  if nWords = 1 then
+    word
+  else
+    word + " " + randomWords wHist (nWords - 1)
 
-let organizeWHist (w1 : wordHistogram) (w2 : wordHistogram) (c : int) =
+// Tries to search for the refered word in w1, in w2. It it occours (doesn't
+// return 'None'), returns the word count as it is in w2. It it doesn't occour,
+// returns a word count of the word, with occourence set as '0'.
+/// <summary> Finds word in word histogram if it's there or returns a '0' value
+/// word count if it isn't there. </summary>
+/// <param name = "w1"> Any word histogram </param>
+/// <param name = "w2"> Word histogram subset of w1 </param>
+/// <param name = "c"> Index of word in w2, to find in w2 </param>
+/// <returns> Word count of word in w2 or '0' value word count. </returns>
+let sortWHist (w1 : wordHistogram) (w2 : wordHistogram) (c : int) =
   let w1E = w1.[c]
 
   if ((List.tryFind (fun k -> fst k = fst w1.[c]) w2) <> None) then 
@@ -120,18 +169,26 @@ let organizeWHist (w1 : wordHistogram) (w2 : wordHistogram) (c : int) =
   else 
     (fst w1E, 0)
 
+// Using sortWHist function, generates a variation of w2 that is sorted for
+// appropriate comparison with w1 and calculates the result of the diffw value
+// (from 7g.pdf), using the number of word occourences.
+/// <summary> Generates a value representing size of difference between
+/// two histograms. </summary>
+/// <remark> w1 is the base-line histogram and w2 the one it is being compared
+/// to, meaning that we assume w1 to hold any words not in w2. </remark>
+/// <param name = "w1"> Any word histogram </param>
+/// <param name = "w2"> Word histogram subset of w1 </param>
+/// <returns> Difference between histograms, represented as a value. </returns>
 let diffw (w1 : wordHistogram) (w2 : wordHistogram) : double =
-  let newW2 = List.init w1.Length (fun c -> organizeWHist w1 w2 c)
+  let newW2 = List.init w1.Length (fun c -> sortWHist w1 w2 c)
   
   // For comparison
-  //printfn "w1: %A" w1
-  //printfn "w1 l: %A" w1.Length
-  //printfn "w2: %A" w2
-  //printfn "w2 l: %A" w2.Length
-  //printfn "newW2: %A" newW2
-  //printfn "newW2 l: %A" newW2.Length
+  printfn "w1: %A" w1
+  printfn "w1 l: %A" w1.Length
+  printfn "w2: %A" w2
+  printfn "w2 l: %A" w2.Length
+  printfn "newW2: %A" newW2
+  printfn "newW2 l: %A" newW2.Length
 
-  let h1 = List.init w1.Length (fun c -> snd w1.[c])
-  let h2 = List.init newW2.Length (fun c -> snd newW2.[c])
-
-  diff h1 h2
+  double (List.sum (List.init w1.Length
+           (fun c -> pown (snd w1.[c] - snd newW2.[c]) 2))) / double w1.Length
