@@ -117,11 +117,12 @@ let wordHistogram (src : string) : wordHistogram =
 /// <returns> Index of specific word in wHist </returns>
 let rec wordLookUp (wHist : wordHistogram) (occo : int) (sum : int) 
                    (index : int) : int =
+
   let newSum = sum + (snd wHist.[0])
-  if occo < newSum then
+  if occo <= newSum then
     index
   else
-    0 + (wordLookUp wHist.Tail occo newSum (index + 1))
+    (wordLookUp wHist.Tail occo newSum (index + 1))
 
 // Sums all the counted occourences of words in the histogram and uses 
 // rnd (random) function to get a random value equal or less to the sum,
@@ -183,12 +184,12 @@ let diffw (w1 : wordHistogram) (w2 : wordHistogram) : double =
   let newW2 = List.init w1.Length (fun c -> sortWHist w1 w2 c)
   
   // For comparison
-  printfn "w1: %A" w1
-  printfn "w1 l: %A" w1.Length
-  printfn "w2: %A" w2
-  printfn "w2 l: %A" w2.Length
-  printfn "newW2: %A" newW2
-  printfn "newW2 l: %A" newW2.Length
+  //printfn "w1: %A" w1
+  //printfn "w1 l: %A" w1.Length
+  //printfn "w2: %A" w2
+  //printfn "w2 l: %A" w2.Length
+  //printfn "newW2: %A" newW2
+  //printfn "newW2 l: %A" newW2.Length
 
   double (List.sum (List.init w1.Length
            (fun c -> pown (snd w1.[c] - snd newW2.[c]) 2))) / double w1.Length
